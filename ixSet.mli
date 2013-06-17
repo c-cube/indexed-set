@@ -41,6 +41,7 @@ module type S = sig
 
     val nil : t
     val cons : 'a index -> t -> t
+    val of_list : 'a index list -> t
   end
 
   type t
@@ -55,16 +56,18 @@ module type S = sig
   val remove : t -> elt -> t
     (** Remove an element to the set *)
 
-  val get_eq : t -> 'a index -> 'a -> elt list
+  val by : t -> 'a index -> 'a -> elt list
     (** Select by key *)
 
-  val get_filter : t -> 'a index -> ('a -> bool) -> elt list
+  val filter : t -> 'a index -> ('a -> bool) -> elt list
     (** Only select elements whose given index satisfies the predicate *)
 
   val iter : t -> (elt -> unit) -> unit
     (** Iterate on all elements *)
 
   val to_list : t -> elt list
+
+  val of_list : t -> elt list -> t
 
   val inter : t -> t -> t
     (** Set intersection. It will have the same indexes as the

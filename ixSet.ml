@@ -74,6 +74,7 @@ module type S = sig
 
     val nil : t
     val cons : 'a index -> t -> t
+    val of_list : 'a index list -> t
   end
 
   type t
@@ -88,16 +89,18 @@ module type S = sig
   val remove : t -> elt -> t
     (** Remove an element to the set *)
 
-  val get_eq : t -> 'a index -> 'a -> elt list
+  val by : t -> 'a index -> 'a -> elt list
     (** Select by key *)
 
-  val get_filter : t -> 'a index -> ('a -> bool) -> elt list
+  val filter : t -> 'a index -> ('a -> bool) -> elt list
     (** Only select elements whose given index satisfies the predicate *)
 
   val iter : t -> (elt -> unit) -> unit
     (** Iterate on all elements *)
 
   val to_list : t -> elt list
+
+  val of_list : t -> elt list -> t
 
   val inter : t -> t -> t
     (** Set intersection. It will have the same indexes as the
@@ -187,6 +190,7 @@ module Make(X : Set.OrderedType) = struct
 
     let nil = []
     let cons idx l = (Cell (idx#embed, Univ.pack idx#embed idx)) :: l
+    let of_list l = List.map (fun idx -> Cell (idx#embed, Univ.pack idx#embed idx)) l
 
     let empty l =
       List.map
@@ -225,7 +229,7 @@ module Make(X : Set.OrderedType) = struct
     } in
     set
 
-  let get_eq set idx key =
+  let by set idx key =
     let rec lookup l = match l with
     | [] -> failwith "bad index for this set"
     | (IndexList.Cell (_, univ)) :: l' ->
@@ -238,7 +242,7 @@ module Make(X : Set.OrderedType) = struct
       end
     in lookup set.indexes
 
-  let get_filter set idx p =
+  let filter set idx p =
     let rec lookup l = match l with
     | [] -> failwith "bad index for this set"
     | (IndexList.Cell (_, univ)) :: l' ->
@@ -269,6 +273,9 @@ module Make(X : Set.OrderedType) = struct
 
   let to_list set =
     Set.elements set.set
+
+  let of_list set l =
+    List.fold_left add set l
 
   let inter s1 s2 =
     let indexes = IndexList.empty s1.indexes in
