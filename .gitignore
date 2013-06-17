@@ -7,3 +7,7 @@
 *.cmx
 *.cmxs
 *.cmxa
+.*.swp
+.*.swo
+_build
+*.docdir
