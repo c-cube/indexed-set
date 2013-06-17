@@ -25,56 +25,62 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (** {1 Indexed Set} *)
 
-type ('a, 'b) index
-  (** Indexes elements of type 'a by keys of type 'b *)
+module type S = sig
+  type elt
+    (** The type of the elements of the set *)
 
-val idx_fun : cmp:('b -> 'b -> int) ->
-              ('a -> 'b list) -> ('a, 'b) index
-  (** Index the elements by their image by the given function *)
+  type 'a index
+    (** Indexes elements by a key of type 'a *)
 
-module IndexList : sig
-  type 'a t
+  val idx_fun : cmp:('a -> 'a -> int) ->
+                (elt -> 'a list) -> 'a index
+    (** Index the elements by their image by the given function *)
 
-  val nil : 'a t
-  val cons : ('a, 'b) index -> 'a t -> 'a t
+  module IndexList : sig
+    type t
+
+    val nil : t
+    val cons : 'a index -> t -> t
+  end
+
+  type t
+    (** The type for an indexed set *)
+
+  val empty : IndexList.t -> t
+    (** Empty set *)
+
+  val add : t -> elt -> t
+    (** Add an element to the set *)
+
+  val remove : t -> elt -> t
+    (** Remove an element to the set *)
+
+  val get_eq : t -> 'a index -> 'a -> elt list
+    (** Select by key *)
+
+  val get_filter : t -> 'a index -> ('a -> bool) -> elt list
+    (** Only select elements whose given index satisfies the predicate *)
+
+  val iter : t -> (elt -> unit) -> unit
+    (** Iterate on all elements *)
+
+  val to_list : t -> elt list
+
+  val inter : t -> t -> t
+    (** Set intersection. It will have the same indexes as the
+        first argument. *)
+
+  val union : t -> t -> t
+    (** Set union. It will have the same indexes as the first argument. *)
+
+  val group_by : t -> 'a index -> ('a * elt list) list
+    (** Group by the given index *)
+
+  val add_idx : t -> 'a index -> t
+    (** Add an index on the fly *)
+
+  val size : t -> int
+    (** Number of elements *)
 end
 
-type 'a t
-  (** The type for an indexed set *)
-
-val mk_set : ?cmp:('a -> 'a -> int) -> 'a IndexList.t -> 'a t
-  (** Create a set indexed by the given list of indexes,
-      and also by the comparison function (like a regular set) *)
-
-val add : 'a t -> 'a -> 'a t
-  (** Add an element to the set *)
-
-val remove : 'a t -> 'a -> 'a t
-  (** Remove an element to the set *)
-
-val get_eq : 'a t -> ('a, 'b) index -> 'b -> 'a list
-  (** Select by predicate *)
-
-val get_filter : 'a t -> ('a, 'b) index -> ('b -> bool) -> 'a list
-  (** Only select elements whose given index satisfies the predicate *)
-
-val iter : 'a t -> ('a -> unit) -> unit
-  (** Iterate on all elements *)
-
-val to_list : 'a t -> 'a list
-
-val inter : 'a t -> 'a t -> 'a t
-  (** Set intersection. It will have the same indexes as the
-      first argument. *)
-
-val union : 'a t -> 'a t -> 'a t
-  (** Set union. It will have the same indexes as the first argument. *)
-
-val group_by : 'a t -> ('a, 'b) index -> ('b * 'a list) list
-  (** Group by the given index *)
-
-val add_idx : 'a t -> ('a, 'b) index -> 'a t
-  (** Add an index on the fly *)
-
-val size : 'a t -> int
-  (** Number of elements *)
+module Make(X : Set.OrderedType) : S with type elt = X.t

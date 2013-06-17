@@ -40,7 +40,6 @@ module Univ = struct
   (** Create a new embedding. Values packed by a given embedding can
       only be unpacked by the same embedding. *)
   let embed () = 
-    let id = ref () in  (* unique ID of the embedding *)
     let r = ref None in (* place to store values *)
     let pack a =        (* pack the 'a value into a new univ cell *)
       let o = Some a in
@@ -59,202 +58,251 @@ module Univ = struct
   let unpack emb t = emb.unpack t
 end
 
-(** Index for a set of values of type 'a by keys of type 'b *)
-class type ['a, 'b] index =
-  object
-    method embed : ('a, 'b) index Univ.embedding
-    method empty : ('a, 'b) index
-    method add : 'a -> ('a, 'b) index
-    method remove : 'a -> ('a, 'b) index
-    method select : 'b -> ('a -> unit) -> unit
-    method keys : ('b -> unit) -> unit
+module type S = sig
+  type elt
+    (** The type of the elements of the set *)
+
+  type 'a index
+    (** Indexes elements by a key of type 'a *)
+
+  val idx_fun : cmp:('a -> 'a -> int) ->
+                (elt -> 'a list) -> 'a index
+    (** Index the elements by their image by the given function *)
+
+  module IndexList : sig
+    type t
+
+    val nil : t
+    val cons : 'a index -> t -> t
   end
 
-(** Index each element by its image by this function *)
-let idx_fun (type k) (type e) ~(cmp : k ->  k -> int) (f : (e -> k list)) =
-  let embed = Univ.embed () in
-  let module M = Map.Make(struct
-    type t = k
-    let compare = cmp
-  end) in
-  (* make an index given the current map index -> element list *)
-  let rec make map =
-    (object
-      method embed = embed
-      method empty = make M.empty
-      method add e =
-        let keys = f e in
-        let map' =
-          List.fold_left
-            (fun map key ->
-              let es = try M.find key map with Not_found -> [] in
-              M.add key (e::es) map)
-            map keys
-        in
-        (make map' :> (e, k) index)
-      method remove e =
-        let keys = f e in
-        let map' =
-          List.fold_left
-            (fun map key ->
-              let es = try M.find key map with Not_found -> [] in
-              let es' = List.filter
-                (fun e' -> e != e')
-                es in
-              if es' = []
-                then M.remove key map
-                else M.add key es' map)
-            map keys
-        in
-        (make map' :> (e, k) index)
-      method select key f' =
-        let es = try M.find key map with Not_found -> [] in
-        List.iter f' es
-      method keys f' =
-        M.iter (fun k _ -> f' k) map
-    end : (e, k) index) in
-  make M.empty
+  type t
+    (** The type for an indexed set *)
 
-class type ['a] set =
-  object
-    method add : 'a -> 'a set
-    method remove : 'a -> 'a set
-    method iter : ('a -> unit) -> unit
-    method mem : 'a -> bool
-    method size : int
-  end
+  val empty : IndexList.t -> t
+    (** Empty set *)
 
-(** Polymorphic set *)
-let mk_set (type elt) ~cmp =
-  let module S = Set.Make(struct
-    type t = elt
-    let compare = cmp
-  end) in
-  (* the object encapsulating [set] *)
-  let rec build set = object
-    method add elt = build (S.add elt set)
-    method remove elt = build (S.remove elt set)
-    method iter f = S.iter f set
-    method mem elt = S.mem elt set
-    method size = S.cardinal set
-  end in
-  (build S.empty :> elt set)
+  val add : t -> elt -> t
+    (** Add an element to the set *)
 
-module IndexList = struct
-  type 'a t = 'a cell list
-  and _ cell =
-    | Cell : (('a, 'b) index Univ.embedding * Univ.t) -> 'a cell
+  val remove : t -> elt -> t
+    (** Remove an element to the set *)
 
-  let nil = []
-  let cons idx l = (Cell (idx#embed, Univ.pack idx#embed idx)) :: l
+  val get_eq : t -> 'a index -> 'a -> elt list
+    (** Select by key *)
+
+  val get_filter : t -> 'a index -> ('a -> bool) -> elt list
+    (** Only select elements whose given index satisfies the predicate *)
+
+  val iter : t -> (elt -> unit) -> unit
+    (** Iterate on all elements *)
+
+  val to_list : t -> elt list
+
+  val inter : t -> t -> t
+    (** Set intersection. It will have the same indexes as the
+        first argument. *)
+
+  val union : t -> t -> t
+    (** Set union. It will have the same indexes as the first argument. *)
+
+  val group_by : t -> 'a index -> ('a * elt list) list
+    (** Group by the given index *)
+
+  val add_idx : t -> 'a index -> t
+    (** Add an index on the fly *)
+
+  val size : t -> int
+    (** Number of elements *)
 end
 
-(** An indexed set is a Set, plus a list of indexes. *)
-type 'a t = {
-  cmp : 'a -> 'a -> int;
-  set : 'a set;
-  indexes : 'a IndexList.t;
-}
+module Make(X : Set.OrderedType) = struct
+  type elt = X.t
 
-(** Build an indexed set, using the given list of indexes *)
-let mk_set ?(cmp=Pervasives.compare) il =
-  (* regular set *)
-  let set = {
-    cmp;
-    set = mk_set ~cmp;
-    indexes = il;
-  } in
-  set
-
-let get_eq set idx key =
-  let rec lookup l = match l with
-  | [] -> failwith "bad index for this set"
-  | (IndexList.Cell (_, univ)) :: l' ->
-    begin match Univ.unpack idx#embed univ with
-    | None -> lookup l' (* not the index you are looking for *)
-    | Some idx' ->
-      let l = ref [] in
-      idx'#select key (fun e -> l := e :: !l);
-      !l
+  (** Index for a set of values of type 'a by keys of type 'b *)
+  class type ['a] index =
+    object
+      method embed : 'a index Univ.embedding
+      method empty : 'a index
+      method add : elt -> 'a index
+      method remove : elt -> 'a index
+      method select : 'a -> (elt -> unit) -> unit
+      method keys : ('a -> unit) -> unit
     end
-  in lookup set.indexes
 
-let get_filter set idx p =
-  let rec lookup l = match l with
-  | [] -> failwith "bad index for this set"
-  | (IndexList.Cell (_, univ)) :: l' ->
-    begin match Univ.unpack idx#embed univ with
-    | None -> lookup l' (* not the index you are looking for *)
-    | Some idx' ->
-      let l = ref [] in
-      idx'#keys
-        (fun k ->
-          if p k then idx'#select k (fun e -> l := e :: !l));
-      !l
-    end
-  in lookup set.indexes
+  (** Index each element by its image by this function *)
+  let idx_fun (type k) ~(cmp : k ->  k -> int) (f : (elt -> k list)) =
+    let embed = Univ.embed () in
+    let module M = Map.Make(struct
+      type t = k
+      let compare = cmp
+    end) in
+    (* make an index given the current map index -> element list *)
+    let rec make map =
+      (object
+        method embed = embed
+        method empty = make M.empty
+        method add e =
+          let keys = f e in
+          let map' =
+            List.fold_left
+              (fun map key ->
+                let es = try M.find key map with Not_found -> [] in
+                M.add key (e::es) map)
+              map keys
+          in
+          (make map' :> k index)
+        method remove e =
+          let keys = f e in
+          let map' =
+            List.fold_left
+              (fun map key ->
+                let es = try M.find key map with Not_found -> [] in
+                let es' = List.filter
+                  (fun e' -> e != e')
+                  es in
+                if es' = []
+                  then M.remove key map
+                  else M.add key es' map)
+              map keys
+          in
+          (make map' :> k index)
+        method select key f' =
+          let es = try M.find key map with Not_found -> [] in
+          List.iter f' es
+        method keys f' =
+          M.iter (fun k _ -> f' k) map
+      end : k index) in
+    make M.empty
 
-let mem set e =
-  set.set#mem e
+  module Set = Set.Make(struct
+    type t = X.t
+    let compare = X.compare
+  end)
 
-let add set e =
-  let indexes = List.map
-    (fun (IndexList.Cell (embed, univ)) ->
-      match Univ.unpack embed univ with
-      | None -> assert false
-      | Some idx ->
-        let idx' = idx#add e in
-        IndexList.Cell (embed, Univ.pack embed idx'))
-    set.indexes
-  in
-  { set with set=set.set#add e; indexes; }
+  module IndexList = struct
+    type t = cell list
+    and cell =
+      | Cell : ('a index Univ.embedding * Univ.t) -> cell
 
-let remove set e =
-  let indexes = List.map
-    (fun (IndexList.Cell (embed, univ)) ->
-      match Univ.unpack embed univ with
-      | None -> assert false
-      | Some idx ->
-        let idx' = idx#remove e in
-        IndexList.Cell (embed, Univ.pack embed idx'))
-    set.indexes
-  in
-  { set with set=set.set#remove e; indexes; }
+    let nil = []
+    let cons idx l = (Cell (idx#embed, Univ.pack idx#embed idx)) :: l
 
-let iter set f =
-  set.set#iter f
+    let empty l =
+      List.map
+        (fun (Cell (embed, univ)) -> match Univ.unpack embed univ with
+          | None -> assert false
+          | Some idx -> Cell (embed, Univ.pack embed idx#empty))
+        l
 
-let to_list set =
-  let l = ref [] in
-  set.set#iter (fun x -> l := x :: !l);
-  !l
+    let add l e =
+      List.map
+        (fun (Cell (embed, univ)) -> match Univ.unpack embed univ with
+          | None -> assert false
+          | Some idx -> Cell (embed, Univ.pack embed (idx#add e)))
+        l
 
-let inter s1 s2 =
-  let indexes = List.map
-    (fun (IndexList.Cell (embed, univ)) ->
-      match Univ.unpack embed univ with
-      | None -> assert false
-      | Some idx -> IndexList.Cell (embed, Univ.pack embed idx#empty))
-    s1.indexes
-  in
-  let new_set = ref (mk_set ~cmp:s1.cmp indexes) in
-  iter s1
-    (fun e -> if mem s2 e then new_set := add !new_set e);
-  !new_set
+    let remove l e =
+      List.map
+        (fun (Cell (embed, univ)) -> match Univ.unpack embed univ with
+          | None -> assert false
+          | Some idx -> Cell (embed, Univ.pack embed (idx#remove e)))
+        l
+  end
+
+  (** An indexed set is a Set, plus a list of indexes. *)
+  type t = {
+    set : Set.t;
+    indexes : IndexList.t;
+  }
+
+  (** Build an indexed set, using the given list of indexes *)
+  let empty il =
+    (* regular set *)
+    let set = {
+      set = Set.empty;
+      indexes = il;
+    } in
+    set
+
+  let get_eq set idx key =
+    let rec lookup l = match l with
+    | [] -> failwith "bad index for this set"
+    | (IndexList.Cell (_, univ)) :: l' ->
+      begin match Univ.unpack idx#embed univ with
+      | None -> lookup l' (* not the index you are looking for *)
+      | Some idx' ->
+        let l = ref [] in
+        idx'#select key (fun e -> l := e :: !l);
+        !l
+      end
+    in lookup set.indexes
+
+  let get_filter set idx p =
+    let rec lookup l = match l with
+    | [] -> failwith "bad index for this set"
+    | (IndexList.Cell (_, univ)) :: l' ->
+      begin match Univ.unpack idx#embed univ with
+      | None -> lookup l' (* not the index you are looking for *)
+      | Some idx' ->
+        let l = ref [] in
+        idx'#keys
+          (fun k ->
+            if p k then idx'#select k (fun e -> l := e :: !l));
+        !l
+      end
+    in lookup set.indexes
+
+  let mem set e =
+    Set.mem e set.set
+
+  let add set e =
+    let indexes = IndexList.add set.indexes e in
+    { set=Set.add e set.set; indexes; }
+
+  let remove set e =
+    let indexes = IndexList.remove set.indexes e in
+    { set=Set.remove e set.set; indexes; }
+
+  let iter set f =
+    Set.iter f set.set
+
+  let to_list set =
+    Set.elements set.set
+
+  let inter s1 s2 =
+    let indexes = IndexList.empty s1.indexes in
+    (* compute intersection *)
+    let set = Set.inter s1.set s2.set in
+    (* update indexes *)
+    let indexes = Set.fold
+      (fun e indexes -> IndexList.add indexes e)
+      set indexes
+    in
+    { set; indexes; }
 
 let union s1 s2 =
-  let new_set = ref s1 in
-  iter s2
-    (fun e -> if (not (mem !new_set e)) then new_set := add !new_set e);
-  !new_set
+    let indexes = IndexList.empty s1.indexes in
+    (* compute union *)
+    let set = Set.union s1.set s2.set in
+    (* update indexes *)
+    let indexes = Set.fold
+      (fun e indexes -> IndexList.add indexes e)
+      set indexes
+    in
+    { set; indexes; }
 
-let group_by set idx =
-  failwith "not implemented"
+  let group_by set idx =
+    failwith "not implemented"
 
-let add_idx set idx =
-  let idx = ref idx in
-  set.set#iter (fun e -> idx := (!idx)#add e);
-  { set with indexes = IndexList.cons !idx set.indexes; }
+  let add_idx set idx =
+    let idx = Set.fold
+      (fun e idx -> idx#add e)
+      set.set idx
+    in
+    let indexes = IndexList.cons idx set.indexes in
+    { set with indexes; }
 
-let size set =
-  set.set#size
+  let size set =
+    Set.cardinal set.set
+end
