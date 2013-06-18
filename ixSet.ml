@@ -80,8 +80,11 @@ module type S = sig
   type t
     (** The type for an indexed set *)
 
-  val empty : IndexList.t -> t
+  val empty : t
     (** Empty set *)
+
+  val empty_with : IndexList.t -> t
+    (** Empty set, using the given list of indexes *)
 
   val add : t -> elt -> t
     (** Add an element to the set *)
@@ -221,13 +224,15 @@ module Make(X : Set.OrderedType) = struct
   }
 
   (** Build an indexed set, using the given list of indexes *)
-  let empty il =
+  let empty_with il =
     (* regular set *)
     let set = {
       set = Set.empty;
       indexes = il;
     } in
     set
+
+  let empty = empty_with []
 
   let by set idx key =
     let rec lookup l = match l with

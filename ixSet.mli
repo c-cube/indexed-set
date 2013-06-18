@@ -47,8 +47,11 @@ module type S = sig
   type t
     (** The type for an indexed set *)
 
-  val empty : IndexList.t -> t
+  val empty : t
     (** Empty set *)
+
+  val empty_with : IndexList.t -> t
+    (** Empty set, using the given list of indexes *)
 
   val add : t -> elt -> t
     (** Add an element to the set *)
