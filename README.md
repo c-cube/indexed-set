@@ -16,46 +16,50 @@ can be added, to access elements by some of their features.
 For instance, if `elt` is a record containing data about people (an
 extended phone book), let say,
 
-    type person = {
-        phone : string;
-        name : string; 
-        age : int;
-    }
+```ocaml
+type person = {
+    phone : string;
+    name : string; 
+    age : int;
+}
+```
 
 Then we can define some indexed set as follows:
 
-    module P = struct
-        type t = person
-        let compare p1 p2 = String.compare p1.name p2.name
-    end
+```ocaml
+module P = struct
+    type t = person
+    let compare p1 p2 = String.compare p1.name p2.name
+end
 
-    module PersonSet = IxSet.Make(P)
+module PersonSet = IxSet.Make(P)
 
-    let ixPhone = PersonSet.idx_fun ~cmp:String.compare (fun p -> [p.phone])
-    let ixName = PersonSet.idx_fun ~cmp:String.compare (fun p -> [p.name])
-    let ixAge = PersonSet.idx_fun ~cmp:Pervasives.compare (fun p -> [p.age])
+let ixPhone = PersonSet.idx_fun ~cmp:String.compare (fun p -> [p.phone])
+let ixName = PersonSet.idx_fun ~cmp:String.compare (fun p -> [p.name])
+let ixAge = PersonSet.idx_fun ~cmp:Pervasives.compare (fun p -> [p.age])
 
-    let set =
-        let set = PersonSet.empty in
-        let set = PersonSet.add_idx set ixPhone in
-        let set = PersonSet.add_idx set ixName in
-        let set = PersonSet.add_idx set ixAge in
-        set
+let set =
+    let set = PersonSet.empty in
+    let set = PersonSet.add_idx set ixPhone in
+    let set = PersonSet.add_idx set ixName in
+    let set = PersonSet.add_idx set ixAge in
+    set
 
-    let set3 = PersonSet.of_list set
-        [ { phone = "01.23.45.67.89";
-            name = "Georges Abitbol";
-            age = 42;
-          };
-          { phone = "01.23.45.67.89";
-            name = "Captain Falcon";
-            age = 0x18;
-          };
-          { phone = "404.404.404";
-            name = "Anne O'Nymous";
-            age = 0;
-          }
-        ]
+let set3 = PersonSet.of_list set
+    [ { phone = "01.23.45.67.89";
+        name = "Georges Abitbol";
+        age = 42;
+      };
+      { phone = "01.23.45.67.89";
+        name = "Captain Falcon";
+        age = 0x18;
+      };
+      { phone = "404.404.404";
+        name = "Anne O'Nymous";
+        age = 0;
+      }
+    ]
+```
 
 We have defined a module `PersonSet`, that allows us to manipulate indexed
 sets of `person`s.
@@ -72,20 +76,24 @@ which indexes we want). `set3` is defined by adding three persons to `set`.
 
 Let us see in a OCaml prompt:
 
-    $ make
-    $ rlwrap ocaml
-    > #load "_build/ixSet.cma";;
-    > PersonSet.by set3 ixAge 42;;
-    - : PersonSet.elt list = [{phone = "42.42.42.42.42"; name = "Georges Abitbol"; age = 42}]
-    > PersonSet.by set3 ixPhone "01.23.45.67.89"
-    - : PersonSet.elt list =                                                                     [{phone = "01.23.45.67.89"; name = "Georges Abitbol"; age = 42};                              {phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24}] 
+```ocaml
+$ make
+$ rlwrap ocaml
+> #load "_build/ixSet.cma";;
+> PersonSet.by set3 ixAge 42;;
+- : PersonSet.elt list = [{phone = "42.42.42.42.42"; name = "Georges Abitbol"; age = 42}]
+> PersonSet.by set3 ixPhone "01.23.45.67.89"
+- : PersonSet.elt list =                                                                     [{phone = "01.23.45.67.89"; name = "Georges Abitbol"; age = 42};                              {phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24}] 
+```
 
 So, using `PersonSet.by`, we can select on a given index. But we can also
 `filter` using a predicate (it's linear, but using the ordering on key types
 it should be easy to have some efficient ordering filters for this example):
 
-    > PersonSet.filter set3 ixAge (fun x -> x < 40);;
-    - : PersonSet.elt list =                                                                     [{phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24};                               {phone = "404.404.404"; name = "Anne O'Nymous"; age = 0}] 
+```ocaml
+> PersonSet.filter set3 ixAge (fun x -> x < 40);;
+- : PersonSet.elt list =                                                                     [{phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24};                               {phone = "404.404.404"; name = "Anne O'Nymous"; age = 0}] 
+```
 
 
 ## License
