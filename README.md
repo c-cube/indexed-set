@@ -81,18 +81,25 @@ $ make
 $ rlwrap ocaml
 > #load "_build/ixSet.cma";;
 > PersonSet.by set3 ixAge 42;;
-- : PersonSet.elt list = [{phone = "42.42.42.42.42"; name = "Georges Abitbol"; age = 42}]
+- : PersonSet.elt list = [{phone = "01.23.45.67.89"; name = "Georges Abitbol"; age = 42}]
 > PersonSet.by set3 ixPhone "01.23.45.67.89"
-- : PersonSet.elt list =                                                                     [{phone = "01.23.45.67.89"; name = "Georges Abitbol"; age = 42};                              {phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24}] 
+- : PersonSet.elt list =
+[{phone = "01.23.45.67.89"; name = "Georges Abitbol"; age = 42};
+{phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24}]
 ```
 
-So, using `PersonSet.by`, we can select on a given index. But we can also
+So, using `PersonSet.by`, we can select on a given index. Notice that
+it returns a list of values, since keys do not have to be injective.
+
+But we can also
 `filter` using a predicate (it's linear, but using the ordering on key types
 it should be easy to have some efficient ordering filters for this example):
 
 ```ocaml
 > PersonSet.filter set3 ixAge (fun x -> x < 40);;
-- : PersonSet.elt list =                                                                     [{phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24};                               {phone = "404.404.404"; name = "Anne O'Nymous"; age = 0}] 
+- : PersonSet.elt list =
+[{phone = "01.23.45.67.89"; name = "Captain Falcon"; age = 24};
+{phone = "404.404.404"; name = "Anne O'Nymous"; age = 0}] 
 ```
 
 
