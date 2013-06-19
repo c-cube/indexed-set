@@ -1,0 +1,6 @@
+name="ixSet"
+version="0.1"
+description="Set of elements, with additional indexes"
+requires=""
+archive(byte) = "ixSet.cma"
+archive(native) = "ixSet.cmxa"
