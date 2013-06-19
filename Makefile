@@ -3,6 +3,7 @@ IMPLEMENTATION_FILES = $(shell find -name '*.ml')
 
 TARGETS_LIB = ixSet.cmxa ixSet.cma
 TARGETS_DOC = ixSet.docdir/index.html
+INSTALL = $(addprefix _build/, $(TARGETS_LIB)) ixSet.mli
 
 OPTIONS = -use-ocamlfind
 	
@@ -16,6 +17,9 @@ doc:
 
 clean:
 	ocamlbuild -clean
+
+install:
+	ocamlfind install ixSet META $(INSTALL)
 
 tags:
 	otags *.ml *.mli
