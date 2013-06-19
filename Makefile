@@ -1,7 +1,7 @@
 INTERFACE_FILES = $(shell find -name '*.mli')
 IMPLEMENTATION_FILES = $(shell find -name '*.ml')
 
-TARGETS_LIB = ixSet.cmxa ixSet.cma
+TARGETS_LIB = ixSet.cmxa ixSet.cma ixSet.cmxs
 TARGETS_DOC = ixSet.docdir/index.html
 INSTALL = $(addprefix _build/, $(TARGETS_LIB)) ixSet.mli
 
@@ -20,6 +20,9 @@ clean:
 
 install:
 	ocamlfind install ixSet META $(INSTALL)
+
+uninstall:
+	ocamlfind remove ixSet
 
 tags:
 	otags *.ml *.mli
