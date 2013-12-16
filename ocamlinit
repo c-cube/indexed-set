@@ -2,7 +2,7 @@
 #load "ixSet.cma";;
 module S = IxSet.Make(struct type t = int let compare = compare end);;
 let by_str = S.idx_fun ~cmp:String.compare (fun x -> [string_of_int x]);;
-let empty = S.empty (S.IndexList.of_list [by_str]);;
+let empty = S.empty_with (S.IndexList.of_list [by_str]);;
 let s1 = S.of_list empty [1;2;3;42];;
 (* vim:filetype=ocaml:
 *)
