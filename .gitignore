@@ -11,3 +11,5 @@
 .*.swo
 _build
 *.docdir
+setup.data
+setup.log

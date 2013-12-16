@@ -1,30 +1,38 @@
-INTERFACE_FILES = $(shell find -name '*.mli')
-IMPLEMENTATION_FILES = $(shell find -name '*.ml')
+# OASIS_START
+# DO NOT EDIT (digest: bc1e05bfc8b39b664f29dae8dbd3ebbb)
 
-TARGETS_LIB = ixSet.cmxa ixSet.cma ixSet.cmxs
-TARGETS_DOC = ixSet.docdir/index.html
-INSTALL = $(addprefix _build/, $(TARGETS_LIB)) ixSet.mli
+SETUP = ocaml setup.ml
 
-OPTIONS = -use-ocamlfind
-	
-all: lib
+build: setup.data
+	$(SETUP) -build $(BUILDFLAGS)
 
-lib:
-	ocamlbuild $(OPTIONS) $(TARGETS_LIB) $(TARGETS_DOC)
+doc: setup.data build
+	$(SETUP) -doc $(DOCFLAGS)
 
-doc:
-	ocamlbuild $(OPTIONS) $(TARGETS_DOC)
+test: setup.data build
+	$(SETUP) -test $(TESTFLAGS)
 
-clean:
-	ocamlbuild -clean
+all: 
+	$(SETUP) -all $(ALLFLAGS)
 
-install:
-	ocamlfind install ixSet META $(INSTALL)
+install: setup.data
+	$(SETUP) -install $(INSTALLFLAGS)
 
-uninstall:
-	ocamlfind remove ixSet
+uninstall: setup.data
+	$(SETUP) -uninstall $(UNINSTALLFLAGS)
 
-tags:
-	otags *.ml *.mli
+reinstall: setup.data
+	$(SETUP) -reinstall $(REINSTALLFLAGS)
 
-.PHONY: all clean tests tags
+clean: 
+	$(SETUP) -clean $(CLEANFLAGS)
+
+distclean: 
+	$(SETUP) -distclean $(DISTCLEANFLAGS)
+
+setup.data:
+	$(SETUP) -configure $(CONFIGUREFLAGS)
+
+.PHONY: build doc test all install uninstall reinstall clean distclean configure
+
+# OASIS_STOP

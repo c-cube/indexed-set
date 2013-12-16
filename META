@@ -1,6 +1,11 @@
-name="ixSet"
-version="0.1"
-description="Set of elements, with additional indexes"
-requires=""
-archive(byte) = "ixSet.cma"
-archive(native) = "ixSet.cmxa"
+# OASIS_START
+# DO NOT EDIT (digest: c0c793195bebc7250b8cf929e501f3f0)
+version = "0.1"
+description = "OCaml implementation of indexed sets"
+archive(byte) = "indexed_set.cma"
+archive(byte, plugin) = "indexed_set.cma"
+archive(native) = "indexed_set.cmxa"
+archive(native, plugin) = "indexed_set.cmxs"
+exists_if = "indexed_set.cma"
+# OASIS_STOP
+
