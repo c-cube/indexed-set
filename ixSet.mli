@@ -25,68 +25,76 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (** {1 Indexed Set} *)
 
-module type S = sig
-  type elt
-    (** The type of the elements of the set *)
+type 'a sequence = ('a -> unit) -> unit
 
-  type 'a index
-    (** Indexes elements by a key of type 'a *)
+type 'a ord = 'a -> 'a -> int
+(** Comparison function *)
 
-  val idx_fun : cmp:('a -> 'a -> int) ->
-                (elt -> 'a list) -> 'a index
-    (** Index the elements by their image by the given function *)
+type 'a def_set
+(** Typeclass of sets of type 'a *)
 
-  module IndexList : sig
-    type t
+val def_set : 'a ord -> 'a def_set
+(** Create a definition of sets *)
 
-    val nil : t
-    val cons : 'a index -> t -> t
-    val of_list : 'a index list -> t
-  end
+type ('elt, 'key) def_index
 
-  type t
-    (** The type for an indexed set *)
+val def_idx : project:('elt -> 'key) ->
+              compare:'key ord ->
+             'elt def_set ->
+             ('elt, 'key) def_index
+(** Definition of an index. It allows to access values of type 'elt
+    by their projection into a type 'key *)
 
-  val empty : t
-    (** Empty set *)
+val def_idx_int : project:('elt -> int) ->
+                'elt def_set ->
+                 ('elt, int) def_index
+(** Index by integer *)
 
-  val empty_with : IndexList.t -> t
-    (** Empty set, using the given list of indexes *)
+val def_idx_string : project:('elt -> string) ->
+                    'elt def_set ->
+                     ('elt, string) def_index
+(** Index by string *)
 
-  val add : t -> elt -> t
-    (** Add an element to the set *)
+type (_,_) hlist =
+  | Nil : ('elt, unit) hlist
+  | Cons :
+    ('elt, 'key) def_index
+    * ('elt, 'tail) hlist
+    -> ('elt, 'key * 'tail) hlist
 
-  val remove : t -> elt -> t
-    (** Remove an element to the set *)
+(** The type [('i, 'k) idx_key] describes how to access the index for
+    the type ['k] within a list of indices ['i] *)
+type (_,_) idx_key =
+  | KThere : (('a * 'b), 'a) idx_key
+  | KNext : ('b, 'c) idx_key -> (('a * 'b), 'c) idx_key
 
-  val by : t -> 'a index -> 'a -> elt list
-    (** Select by key *)
+val there : ('a * _, 'a) idx_key
+val next : ('a, 'b) idx_key -> ('c * 'a, 'b) idx_key
 
-  val filter : t -> 'a index -> ('a -> bool) -> elt list
-    (** Only select elements whose given index satisfies the predicate *)
+val k0 : ('a * _, 'a) idx_key
+val k1 : (_ * ('a * _), 'a) idx_key
+val k2 : (_ * (_ * ('a * _)), 'a) idx_key
+val k3 : (_ * (_ * (_ * ('a * _))), 'a) idx_key
 
-  val iter : t -> (elt -> unit) -> unit
-    (** Iterate on all elements *)
+type ('elt, 'indices) def
+(** Definition of the type of sets of element 'elt indexed by 'indices *)
 
-  val to_list : t -> elt list
+type ('elt, 'indices) t
+(** An instance of ('elt, 'indices) def *)
 
-  val of_list : t -> elt list -> t
+val def : 'elt def_set -> ('elt, 'indices) hlist -> ('elt, 'indices) def
+(** Create a new definition *)
 
-  val inter : t -> t -> t
-    (** Set intersection. It will have the same indexes as the
-        first argument. *)
+val make : ('elt, 'indices) def -> ('elt, 'indices) t
+(** Instantiate the given definition *)
 
-  val union : t -> t -> t
-    (** Set union. It will have the same indexes as the first argument. *)
+val add : 'e -> ('e, 'i) t -> ('e, 'i) t
+(** Add an element *)
 
-  val group_by : t -> 'a index -> ('a * elt list) list
-    (** Group by the given index *)
+val remove : 'e -> ('e, 'i) t -> ('e, 'i) t
+(** Remove an element *)
 
-  val add_idx : t -> 'a index -> t
-    (** Add an index on the fly *)
+val find : idx:('i, 'k) idx_key -> 'k -> ('e, 'i) t -> 'e sequence
+(** [find ~idx set k] finds all elements of [set] that are indexed
+    with the key [k] in the index number [idx] *)
 
-  val size : t -> int
-    (** Number of elements *)
-end
-
-module Make(X : Set.OrderedType) : S with type elt = X.t
