@@ -8,19 +8,25 @@
 #require "ppx_deriving.std";;
 #require "sequence";;
 
-type t = { id: int; name: string } [@@deriving ord];;
-let set_t = IxSet.def_set compare;;
-let idx1 = IxSet.def_idx_int ~project:(fun {id}->id) set_t;;
-let idx2 = IxSet.def_idx_string ~project:(fun {name}->name) set_t;;
-let def = IxSet.def set_t IxSet.(Cons (idx1, Cons (idx2, Nil))) ;;
+type person = { id: int; age: int; name: string } [@@deriving ord];;
 
-let p1 = {id=1; name="1"} ;;
-let p2 = {id=2; name="2"};;
+module S = IxSet.Make(struct
+  type t = person
+  let compare = compare_person
+end)
 
-let set = IxSet.make def |> IxSet.add p1 |> IxSet.add p2;;
+let idx_id = S.def_idx_int ~project:(fun {id}->id) ;;
+let idx_age = S.def_idx_int ~project:(fun {age}->age) ;;
+let idx_name = S.def_idx_string ~project:(fun {name}->name) ;;
 
-assert (IxSet.find ~idx:IxSet.KThere 1 set |> Sequence.to_list = [p1]);;
-assert (IxSet.find ~idx:IxSet.KThere 2 set |> Sequence.to_list = [p2]);;
-assert (IxSet.find ~idx:IxSet.KThere 3 set |> Sequence.to_list = []);;
-assert (IxSet.find ~idx:IxSet.k1 "1" set |> Sequence.to_list = [p1]);;
+let empty = S.make S.(Cons (idx_id, Cons (idx_age, Cons (idx_name, Nil)))) ;;
+
+let p1 = {id=1; name="Jean-Charles Édouard" ; age=18} ;;
+let p2 = {id=2; name="Chocolatine qui parle"; age=3};;
+
+let set = S.of_list empty [p1; p2] ;;
+
+assert (S.find ~idx:S.k0 1 set |> Sequence.to_list = [p1]);;
+assert (S.find ~idx:S.k0 2 set |> Sequence.to_list = [p2]);;
+assert (S.find ~idx:S.k1 3 set |> Sequence.to_list = [p2]);;
 
