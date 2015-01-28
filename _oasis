@@ -17,7 +17,7 @@ Description:
 Library "indexed_set"
   Path:             .
   Pack:             false
-  Modules:          IxSet, IxSet_intf
+  Modules:          IxSet
 
 Document "indexed-set"
   Title:                Indexed-set
